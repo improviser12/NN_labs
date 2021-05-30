@@ -1,0 +1,115 @@
+clc;
+clear;
+xdel(winsid());
+
+m=30;
+n=30;
+p=7;
+L=m-p;
+
+x0 = 0;
+
+for i=1:m+n
+    x(i)=x0 + 0.1 * i;
+    y(i)=5*sin(6*x(i))+0.3;
+    printf('y(%d) = %f \n', i, y(i));
+end;
+
+for i=1:p
+    for j=1:p
+        w(i, j)=0.2*rand()-0.1;
+        //printf('w(%d%d) = %f \n', i, j, w(i, j));
+    end;
+end;
+//
+for i=1:p
+    v(i)=0.2*rand()-0.1;
+    //printf('w(%d) = %f \n', i, v(i));
+end;
+
+for i=1:p
+    T(i) = 0;
+end
+//
+T_2=0;
+epochs = 1;
+Em = 1e-3;
+done = %F;
+alpha = 0.05;
+
+while done==%F do
+    E = 0;
+    Es(epochs) = 0;
+    for i=1:L
+        for j=1:p
+            S(j)=0;
+            for k=1:p
+                S(j)=S(j) + y(i+k-1) * w(k, j)
+            end;
+            S(j)=S(j)-T(j);
+            temp_y(j)=1/(1+%e^(-S(j)));
+        end;
+        output=0;
+        for j=1:p
+            output=output+v(j)*temp_y(j);
+        end;
+        output=output-T_2;
+        for j=1:p
+            v(j)=v(j) - alpha*(output-y(i+p))*temp_y(j);
+        end;
+        T_2=T_2+alpha*(output-y(i+p));
+        for j=1:p
+            for k=1:p
+                w(j,k)=w(j,k)-alpha*(output-y(i+p))*v(k)*temp_y(k)*(1-temp_y(k))* y(j+i-1);
+            end;
+            T(j)=T(j)+alpha*(output-y(i+p))*v(j)*temp_y(j)*(1-temp_y(j));
+        end;
+        E = E + (output - y(i+p))^2;
+    end;
+    Es(epochs) = E / 2;
+    printf('Es = %f\n', Es(epochs));
+    if Es(epochs)<=Em then
+        done = %T;
+    end;
+    if epochs > 10000
+        done = %T;
+    end;
+    epochs = epochs+1;
+end;
+
+for i=L:L+n
+   for j=1:p
+       S(j)=0;
+       for k=1:p
+           S(j)=S(j) + y(i+k-1) * w(k, j)
+       end;
+       S(j)=S(j)-T(j);
+       temp_y(j)=1/(1+%e^(-S(j)));
+    end;
+    output(i+p)=0;
+    for j=1:p
+        output(i+p)=output(i+p)+v(j)*temp_y(j);
+    end;
+    output(i+p)=output(i+p)-T_2;
+
+    printf('e(%d) = %f\n', i, y(i+p));
+    printf('y(%d) = %f\n', i, output(i+p));
+end;
+
+plot(1:length(Es), Es, 'g*-');
+xlabel('number of epoch', 'fontsize', 3);
+ylabel('Es', 'fontsize', 3);
+
+halt;
+
+c=color("blue");
+plot2d(x(L:L+n), y(L+p:L+p+n), style=c);
+h1=gca();
+h1.children(1).children(1).thickness=2;
+
+c=color("red");
+plot2d(x(L:L+n), output(L+p:L+p+n), style=c);
+h2=gca();
+h2.children(1).children(1).thickness=2;
+
+
